@@ -2,23 +2,26 @@ package main
 
 import (
 	"github.com/google/go-github/github"
-	"io/ioutil"
 	"log"
 	"net/http"
+	"os"
 )
 
+func logError(r *http.Request, err error) {
+	log.Printf("Headers: %v\nError: %v\n\n", r.Header, err)
+}
+
 func handleWebhook(w http.ResponseWriter, r *http.Request) {
-	log.Printf("Headers: %v\n", r.Header)
-	payload, err := ioutil.ReadAll(r.Body)
+	payload, err := github.ValidatePayload(r, []byte(os.Getenv("GHA_SECRET")))
+	defer r.Body.Close()
 	if err != nil {
-		log.Println(err)
+		logError(r, err)
 		return
 	}
-	defer r.Body.Close()
 
 	event, err := github.ParseWebHook(github.WebHookType(r), payload)
 	if err != nil {
-		log.Println(err)
+		logError(r, err)
 		return
 	}
 	log.Printf("Event: %#v\n\n", event)
